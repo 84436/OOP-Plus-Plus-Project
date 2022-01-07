@@ -2,23 +2,6 @@ package hcmus.adp.damproject.statement;
 
 import hcmus.adp.damproject.annotations.Row;
 
-/**
- * .from(DataClass)
- * .where("attribute", Operation, value) ✅
- * .groupBy("attribute") & .having(COUNT/SUM/MAX/MIN/AVG, "attribute", Operation, value)
- * .getFinalStatement()
- * 
- * .and(WhereStatement[])
- * .and()
- * and(A, or(and(D, B), C)) -> "(A) AND ((D AND B) OR C)"
- * .or(WhereStatement[])
- * 
- * ConditionStatement
- * LogicalConditionStatement -> AndConditionStatement, OrConditionStatement
- * AndConditionStatement -> ConditionStatment, LogicalConditionStatement
- * 
- */
-
 public class SelectStatementBuilder implements StatementBuilderIface {
     private Class<?> _from;
     private CondStmtIface _where;
