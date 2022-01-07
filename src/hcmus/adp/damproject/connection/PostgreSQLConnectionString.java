@@ -1,6 +1,6 @@
 package hcmus.adp.damproject.connection;
 
-public class PostgreSQLConnectionString {
+public class PostgreSQLConnectionString implements DBConnectionString {
     private String hostname;
     private int port;
     private String database;
