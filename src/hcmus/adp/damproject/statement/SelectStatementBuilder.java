@@ -7,6 +7,7 @@ public class SelectStatementBuilder implements StatementBuilderIface {
     private Class<?> _from;
     private CondStmtIface _where;
     private String _groupby;
+    private CondStmtIface _having;
     private AGGREGATE _aggregate;
     private String _aggregateCol;
 
@@ -22,6 +23,11 @@ public class SelectStatementBuilder implements StatementBuilderIface {
 
     public SelectStatementBuilder groupby(String row) {
         this._groupby = row;
+        return this;
+    }
+
+    public SelectStatementBuilder having(CondStmtIface cond) {
+        this._having = cond;
         return this;
     }
 
@@ -67,7 +73,10 @@ public class SelectStatementBuilder implements StatementBuilderIface {
                 sb.append(String.format("WHERE %s ", this._where.toString()));
             }
             if (this._groupby != null) {
-                sb.append(String.format("GROUP BY %s", this._groupby));
+                sb.append(String.format("GROUP BY %s ", this._groupby));
+            }
+            if (this._having != null) {
+                sb.append(String.format("HAVING %s", this._having));
             }
 
             return new SelectStatement(this._from, sb.toString()).setAggregateColName(this.getAggregateColName());

@@ -7,6 +7,7 @@ import hcmus.adp.damproject.connection.DBConnection;
 import hcmus.adp.damproject.connection.SQLiteFileConnectionString;
 import hcmus.adp.damproject.entity.Entity;
 import hcmus.adp.damproject.enums.AGGREGATE;
+import hcmus.adp.damproject.statement.Aggregate;
 import hcmus.adp.damproject.enums.OP_LOGIC;
 import hcmus.adp.damproject.enums.OP_RELATION;
 import hcmus.adp.damproject.session.Session;
@@ -44,11 +45,10 @@ public class App {
             boolean insertSucceeded = false;
             while (counter <= 5) {
                 insertSucceeded = mySession.insert(new Todo(
-                    counter,
-                    String.format("This is todo item %d", counter),
-                    String.format("Description %d", counter),
-                    counter % 2 == 0 ? true : false
-                ));
+                        counter,
+                        String.format("This is todo item %d", counter),
+                        String.format("Description %d", counter),
+                        counter % 2 == 0 ? true : false));
                 if (insertSucceeded) {
                     System.out.println(String.format("Item #%d inserted successfully", counter));
                 } else {
@@ -63,22 +63,18 @@ public class App {
              */
             System.out.println("SELECT with condition");
             ArrayList<Entity> filteredTodos = mySession.select(
-                new SelectStatementBuilder()
-                    .from(Todo.class)
-                    .where(
-                        new LogicCondStmt(
-                            new CondStmt("id", OP_RELATION.GE, 2),
-                            OP_LOGIC.AND,
-                            new CondStmt("id", OP_RELATION.LE, 4)
-                        )
-                    )
-                    .getResult()
-                );
-            for (var each: filteredTodos) {
+                    new SelectStatementBuilder()
+                            .from(Todo.class)
+                            .where(
+                                    new LogicCondStmt(
+                                            new CondStmt("id", OP_RELATION.GE, 2),
+                                            OP_LOGIC.AND,
+                                            new CondStmt("id", OP_RELATION.LE, 4)))
+                            .getResult());
+            for (var each : filteredTodos) {
                 System.out.println(String.format(
-                    "id=%d, title=%s",
-                    each.get("id"), each.get("title")
-                ));
+                        "id=%d, title=%s",
+                        each.get("id"), each.get("title")));
             }
             System.out.println();
 
@@ -87,11 +83,10 @@ public class App {
              */
             System.out.println("SELECT all");
             ArrayList<Entity> todos = mySession.select(
-                new SelectStatementBuilder()
-                    .from(Todo.class)
-                    .getResult()
-                );
-            for (var each: todos) {
+                    new SelectStatementBuilder()
+                            .from(Todo.class)
+                            .getResult());
+            for (var each : todos) {
                 System.out.println(stringifyTodo(each));
             }
             System.out.println();
@@ -135,14 +130,15 @@ public class App {
              */
             System.out.println("SELECT with GROUP BY");
             SelectStatement aggregateStmt = new SelectStatementBuilder()
-                .from(Todo.class)
-                .setAggregate(AGGREGATE.SUM)
-                .setAggregateCol("id")
-                .groupby("done")
-                .getResult();
+                    .from(Todo.class)
+                    .setAggregate(AGGREGATE.SUM)
+                    .setAggregateCol("id")
+                    .groupby("done")
+                    .having(new CondStmt(new Aggregate(AGGREGATE.SUM, "id").toString(), OP_RELATION.GE, 1))
+                    .getResult();
             System.out.println(aggregateStmt);
             HashMap<Entity, Float> res = mySession.aggregate(aggregateStmt);
-            for (var entity: res.entrySet()) {
+            for (var entity : res.entrySet()) {
                 System.out.println(entity.getValue());
             }
             System.out.println();
