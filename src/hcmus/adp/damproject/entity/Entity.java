@@ -99,7 +99,7 @@ public class Entity {
         }
     }
 
-    public boolean delete() { //data T đưa dỏm r :>
+    public boolean delete() { 
         try {
             String sql = String.format(
                 "DELETE FROM %s WHERE %s",
