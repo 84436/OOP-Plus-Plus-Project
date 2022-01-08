@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import hcmus.adp.damproject.annotations.PrimaryField;
 import hcmus.adp.damproject.annotations.Row;
@@ -38,7 +39,7 @@ public class Session {
         this.autoSetTableName();
 
         // Get fields
-        for (var each: this._dataClass.getDeclaredFields()) {
+        for (var each : this._dataClass.getDeclaredFields()) {
             // Make the field accessible
             each.setAccessible(true);
 
@@ -47,7 +48,7 @@ public class Session {
 
             // Push to _entityFields
             this._entityFields.add(
-                new EntityField(each.getName(), each.isAnnotationPresent(PrimaryField.class), null));
+                    new EntityField(each.getName(), each.isAnnotationPresent(PrimaryField.class), null));
         }
     }
 
@@ -72,18 +73,18 @@ public class Session {
                 // Execute query
                 Statement _statement = this._conn.createStatement();
                 ResultSet rs = _statement.executeQuery(stmt.toString());
-                
+
                 // For each row...
                 while (rs.next()) {
 
                     // Deep-copy _entityFields to prepare it for pushing to a new Entity()
                     ArrayList<EntityField> entityFields = new ArrayList<>();
-                    for (var each: _entityFields) {
+                    for (var each : _entityFields) {
                         entityFields.add(each.clone());
                     }
 
                     // For each column of that row...
-                    for (var col: this._dataClassColumns) {
+                    for (var col : this._dataClassColumns) {
 
                         // Find matching EntityField (both object and index)
                         EntityField efTarget = null;
@@ -103,13 +104,15 @@ public class Session {
                                 case "java.lang.Boolean":
                                     efTarget.value = rs.getBoolean(col.getName());
                                     break;
-                                
+
                                 // "It's something else": set it as is
                                 default:
                                     efTarget.value = rs.getObject(col.getName());
                                     break;
                             }
-                        } catch (Exception exc) { throw exc; }
+                        } catch (Exception exc) {
+                            throw exc;
+                        }
                     }
 
                     // Create a new Entity, then push it to the entites array
@@ -123,7 +126,7 @@ public class Session {
         }
         return new ArrayList<Entity>();
     }
-    
+
     // Return whether the object has been inserted into the table
     public boolean insert(Object newItem) {
         try {
@@ -135,7 +138,7 @@ public class Session {
             // Generate list of fields and string-ified values
             ArrayList<String> _dataClassColumnsFields = new ArrayList<>();
             ArrayList<String> _dataClassColumnsValues = new ArrayList<>();
-            for (var col: this._dataClassColumns) {
+            for (var col : this._dataClassColumns) {
                 // Field name
                 _dataClassColumnsFields.add(col.getName());
 
@@ -145,13 +148,12 @@ public class Session {
                     case "java.lang.Boolean":
                         _dataClassColumnsValues.add(col.getBoolean(newItem) ? "true" : "false");
                         break;
-                    
+
                     case "java.lang.String":
                         _dataClassColumnsValues.add(
-                            String.format("'%s'", col.get(newItem).toString())
-                        );
+                                String.format("'%s'", col.get(newItem).toString()));
                         break;
-                    
+
                     default:
                         _dataClassColumnsValues.add(col.get(newItem).toString());
                         break;
@@ -159,11 +161,10 @@ public class Session {
             }
 
             String sql = String.format(
-                "INSERT INTO %s (%s) VALUES (%s);",
-                this._tableName,
-                String.join(", ", _dataClassColumnsFields),
-                String.join(", ", _dataClassColumnsValues)
-            );
+                    "INSERT INTO %s (%s) VALUES (%s);",
+                    this._tableName,
+                    String.join(", ", _dataClassColumnsFields),
+                    String.join(", ", _dataClassColumnsValues));
 
             Statement stmt = this._conn.createStatement();
             int affectedRows = stmt.executeUpdate(sql);
@@ -173,6 +174,7 @@ public class Session {
                 return false;
             }
         } catch (Exception exc) {
+            exc.printStackTrace();
             // Do nothing. It should jump to the empty return below.
         }
         return false;
@@ -193,5 +195,71 @@ public class Session {
     public int executeSqlUpdate(String sql) throws SQLException {
         Statement stmt = this._conn.createStatement();
         return stmt.executeUpdate(sql);
+    }
+
+    // return entities with aggregate value;
+    public HashMap<Entity, Float> aggregate(SelectStatement stmt) throws SQLException {
+        // Create result list
+        HashMap<Entity,Float> res = new HashMap<>();
+
+        try {
+            // Check if target table of the given SelectStatement
+            // matches what Session expects
+            if (stmt.getDataClass().getName().equals(this._dataClass.getName())) {
+
+                // Execute query
+                Statement _statement = this._conn.createStatement();
+                ResultSet rs = _statement.executeQuery(stmt.toString());
+
+                // For each row...
+                while (rs.next()) {
+
+                    // Deep-copy _entityFields to prepare it for pushing to a new Entity()
+                    ArrayList<EntityField> entityFields = new ArrayList<>();
+                    for (var each : _entityFields) {
+                        entityFields.add(each.clone());
+                    }
+
+                    // For each column of that row...
+                    for (var col : this._dataClassColumns) {
+
+                        // Find matching EntityField (both object and index)
+                        EntityField efTarget = null;
+                        for (int i = 0; i < entityFields.size(); i++) {
+                            if (entityFields.get(i).name.equals(col.getName())) {
+                                efTarget = entityFields.get(i);
+                                break;
+                            }
+                        }
+
+                        // Set the value of that EntityField
+                        try {
+                            // Check the type of the field
+                            switch (col.getType().getName()) {
+                                // "It's a boolean": get boolean from result set correctly
+                                case "boolean":
+                                case "java.lang.Boolean":
+                                    efTarget.value = rs.getBoolean(col.getName());
+                                    break;
+
+                                // "It's something else": set it as is
+                                default:
+                                    efTarget.value = rs.getObject(col.getName());
+                                    break;
+                            }
+                        } catch (Exception exc) {
+                            throw exc;
+                        }
+                    }
+
+                    // Create a new Entity, then push it to the entites array
+                    res.put(new Entity(this._conn, this._tableName, entityFields), rs.getFloat(stmt.getAggregateColName()));
+                }
+
+            }
+        } catch (Exception exc) {
+            // Do nothing. It should jump to the empty return below.
+        }
+        return res;
     }
 }
